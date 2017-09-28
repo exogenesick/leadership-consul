@@ -1,4 +1,4 @@
-package com.github.exogenesick.leadership.consul;
+package net.kinguin.leadership.consul;
 
 public class LeaderData {
     public String sessionId;

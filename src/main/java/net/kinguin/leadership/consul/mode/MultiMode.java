@@ -1,12 +1,16 @@
-package com.github.exogenesick.leadership.consul.mode;
+package net.kinguin.leadership.consul.mode;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.github.exogenesick.leadership.consul.Cluster;
+import net.kinguin.leadership.consul.Cluster;
+import rx.Observable;
+import rx.subjects.PublishSubject;
 
-public class MultiMode implements Runnable, ClusterMode {
+public class MultiMode extends ClusterMode implements Runnable {
     private Cluster cluster;
     private long attemptsFrequencySeconds;
     private boolean gotLeadership;
+    private boolean wasLeader = false;
+    private PublishSubject<Object> subject = PublishSubject.create();
 
     public MultiMode(
         Cluster cluster,
@@ -33,13 +37,25 @@ public class MultiMode implements Runnable, ClusterMode {
             try {
                 wait(attemptsFrequencySeconds * 1000);
                 gotLeadership = cluster.claimLeadership();
-            } catch (JsonProcessingException e) {
+                subject.onNext(new String("elected"));
+
+                if (false == wasLeader) {
+                    subject.onNext(new String("firsttimer"));
+                    wasLeader = true;
+                }
+            } catch (Exception e) {
+                subject.onError(e);
                 gotLeadership = false;
-            } catch (InterruptedException e) {}
+            }
         }
     }
 
     public synchronized boolean isLeader() {
         return gotLeadership;
+    }
+
+    @Override
+    public Observable<Object> asObservable() {
+        return subject;
     }
 }
