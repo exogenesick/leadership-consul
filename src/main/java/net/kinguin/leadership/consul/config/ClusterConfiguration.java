@@ -1,4 +1,4 @@
-package com.github.exogenesick.leadership.consul.config;
+package net.kinguin.leadership.consul.config;
 
 public class ClusterConfiguration {
     private String host;

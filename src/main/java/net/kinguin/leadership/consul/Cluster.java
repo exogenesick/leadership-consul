@@ -1,4 +1,4 @@
-package com.github.exogenesick.leadership.consul;
+package net.kinguin.leadership.consul;
 
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.kv.KeyValueClient;
@@ -6,7 +6,7 @@ import com.ecwid.consul.v1.kv.KeyValueConsulClient;
 import com.ecwid.consul.v1.kv.model.PutParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.exogenesick.leadership.consul.config.ClusterConfiguration;
+import net.kinguin.leadership.consul.config.ClusterConfiguration;
 
 public class Cluster {
     private Session session;
@@ -44,6 +44,10 @@ public class Cluster {
         return (boolean) response.getValue();
     }
 
+    public ClusterConfiguration getClusterConfiguration() {
+        return clusterConfiguration;
+    }
+
     private String buildLeaderData(Session session) throws JsonProcessingException {
         LeaderData leaderData = new LeaderData();
         leaderData.sessionId = session.getId();
@@ -51,9 +55,5 @@ public class Cluster {
         leaderData.serviceId = clusterConfiguration.getServiceId();
 
         return new ObjectMapper().writeValueAsString(leaderData);
-    }
-
-    public ClusterConfiguration getClusterConfiguration() {
-        return clusterConfiguration;
     }
 }

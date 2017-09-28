@@ -1,4 +1,4 @@
-package com.github.exogenesick.leadership.consul;
+package net.kinguin.leadership.consul;
 
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.session.SessionConsulClient;
