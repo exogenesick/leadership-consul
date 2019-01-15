@@ -1,47 +1,78 @@
 # Leadership Consul
 
-## Example of plain Java usage
+## Installation
 
-```java
-public class App {
-    public static void main(String[] args) {
-        Session session = new Session(15);
-        Cluster cluster = new Cluster(session, new ClusterConfiguration());
+Look into [releases section](https://github.com/kinguinltdhk/leadership-consul/releases) and pick version.
 
-        new MultiMode(cluster, 5);
+Put into Your ```gradle.build```
 
-        // long time thread
-    }
+```groovy
+repositories {
+    // ...
+    maven { url "https://jitpack.io" }
+}
+
+dependencies {
+    // ...
+    compile "com.github.kinguinltdhk:leadership-consul:0.2.0"
 }
 ```
 
-Above code will create Consul session with TTL = 15 seconds and recreate it every 7 seconds. `MultiNode` class will try to attach leader to current node (every 5 econds).
+## Example of plain Java usage
+
+Use ```SimpleClusterFactory``` to ```build()``` Your ```Gambler``` instance. 
+Every ```Gambler``` implementation provides ```asObservable()``` which facilitate access to events by subscribers.
+This code will create ```ActiveGambler``` and subscribe to it with simple console output printer and print ```Gambler``` events. 
+
+You should see in the output:
+```
+elected // after 5 sconds
+elected.first // after 5 sconds
+elected // every 10 seconds
+```
+
+**Notice:** Execution of this code require Consul to be available on localhost:8500.
+
+```java
+new SimpleClusterFactory()
+    .mode(SimpleClusterFactory.MODE_MULTI)
+    .debug(true)
+    .build()
+    .asObservable()
+    .subscribe(n -> System.out.println(n));
+```
 
 ## Spring example
 
 ```java
-@Configuration
 @Profile("multiinstance")
+@Configuration
 @ConditionalOnConsulEnabled
-@EnableConfigurationProperties(value = ClusterProperties.class)
+@EnableConfigurationProperties(value = {ClusterProperties.class, ConsulProperties.class})
 public class MultiInstance {
     @Autowired
     private ClusterProperties clusterProperties;
 
+    @Autowired
+    private ConsulProperties consulProperties;
+
     @Bean
-    public Session session() {
-        return new Session(clusterProperties.getLeader().getSessionTtl());
+    public SessionConsulClient sessionConsulClient() {
+        return new SessionConsulClient(consulProperties.getHost(), consulProperties.getPort());
     }
 
     @Bean
-    public Cluster cluster(Session session) {
-        return new Cluster(session, clusterProperties.getLeader());
+    public KeyValueConsulClient keyValueConsulClient() {
+        return new KeyValueConsulClient(consulProperties.getHost(), consulProperties.getPort());
     }
 
     @Bean
     @Primary
-    public ClusterMode multiinstance(Cluster cluster) {
-       return new MultiMode(cluster, clusterProperties.getLeader().getLeadershipAttemptsInterval());
+    public Gambler multiinstance(SessionConsulClient sessionConsulClient, KeyValueConsulClient keyValueConsulClient) {
+        return new SimpleClusterFactory(sessionConsulClient, keyValueConsulClient)
+            .mode(SimpleClusterFactory.MODE_MULTI)
+            .configure(clusterProperties.getLeader())
+            .build();
     }
 }
 ```
@@ -71,9 +102,13 @@ In `application.yml` put section:
 cluster:
     leader:
         serviceName: cluster
-        leaderKeyTemplate: services/%s/leader
         serviceId: node-1
-        sessionTtl: 15
-        leadershipAttemptsInterval: 10
+        consul:
+            host: localhost
+            port: 8500
+        session:
+            ttl: 15
+            refresh: 7
+        election:
+            envelopeTemplate: services/%s/leader
 ```
-
